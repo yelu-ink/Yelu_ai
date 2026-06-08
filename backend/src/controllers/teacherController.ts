@@ -277,6 +277,7 @@ export class TeacherController {
       }
 
       const result = await TeacherService.createStudentAccount(
+        req.user!.id,
         name,
         major,
         studentLink
@@ -295,6 +296,72 @@ export class TeacherController {
       res.status(400).json({
         success: false,
         message: error.message || '创建学生账号失败',
+      });
+    }
+  }
+
+  // 更新学生账号
+  static async updateStudentAccount(req: AuthRequest, res: Response) {
+    try {
+      const userId = parseInt(req.params.id, 10);
+      if (Number.isNaN(userId)) {
+        return res.status(400).json({
+          success: false,
+          message: '无效的学生 ID',
+        });
+      }
+
+      const { name, username, password, className, studentLink } = req.body;
+
+      if (!name || !username || !password) {
+        return res.status(400).json({
+          success: false,
+          message: '请填写姓名、账号和密码',
+        });
+      }
+
+      const result = await TeacherService.updateStudentAccount(req.user!.id, userId, {
+        name,
+        username,
+        password,
+        className,
+        studentLink,
+      });
+
+      res.json({
+        success: true,
+        message: '学生信息更新成功',
+        data: result,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || '更新学生信息失败',
+      });
+    }
+  }
+
+  // 删除学生账号
+  static async deleteStudentAccount(req: AuthRequest, res: Response) {
+    try {
+      const userId = parseInt(req.params.id, 10);
+      if (Number.isNaN(userId)) {
+        return res.status(400).json({
+          success: false,
+          message: '无效的学生 ID',
+        });
+      }
+
+      await TeacherService.deleteStudentAccount(req.user!.id, userId);
+
+      res.json({
+        success: true,
+        message: '学生已删除',
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || '删除学生失败',
       });
     }
   }

@@ -30,6 +30,22 @@ AuthorizedStudent_1.default.belongsTo(User_1.default, {
     foreignKey: 'usedByUserId',
     as: 'manager',
 });
+User_1.default.hasMany(User_1.default, {
+    foreignKey: 'teacherId',
+    as: 'students',
+});
+User_1.default.belongsTo(User_1.default, {
+    foreignKey: 'teacherId',
+    as: 'teacher',
+});
+AuthorizedStudent_1.default.belongsTo(User_1.default, {
+    foreignKey: 'teacherId',
+    as: 'teacher',
+});
+User_1.default.hasMany(AuthorizedStudent_1.default, {
+    foreignKey: 'teacherId',
+    as: 'authorizedStudents',
+});
 User_1.default.hasMany(UserConfig_1.default, {
     foreignKey: 'userId',
     as: 'configs',

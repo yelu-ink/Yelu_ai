@@ -53,9 +53,28 @@ export interface StudentOverviewItem {
   name: string
   username: string
   password?: string
+  studentLink?: string
   className: string
   totalApplications: number
   statusCount: Record<string, number>
+}
+
+interface UpdateStudentResponse {
+  success: boolean
+  message: string
+  data: {
+    id: number
+    name: string
+    username: string
+    password: string
+    className: string
+    studentLink?: string
+  }
+}
+
+interface DeleteStudentResponse {
+  success: boolean
+  message: string
 }
 
 interface StudentsOverviewResponse {
@@ -83,6 +102,25 @@ export const teacherApi = {
   // 获取学生概览
   getStudentsOverview() {
     return request.get<StudentsOverviewResponse>('/teacher/students/overview')
+  },
+
+  // 更新学生信息
+  updateStudent(
+    id: number,
+    data: {
+      name: string
+      username: string
+      password: string
+      className?: string
+      studentLink?: string
+    }
+  ) {
+    return request.put<UpdateStudentResponse>(`/teacher/students/${id}`, data)
+  },
+
+  // 删除学生
+  deleteStudent(id: number) {
+    return request.delete<DeleteStudentResponse>(`/teacher/students/${id}`)
   },
 
   // 获取学生名单

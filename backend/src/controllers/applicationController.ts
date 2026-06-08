@@ -138,6 +138,24 @@ export class ApplicationController {
     }
   }
 
+  // 获取投递量排名
+  static async ranking(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const data = await ApplicationService.getApplicationRanking(userId);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || '获取投递量排名失败',
+      });
+    }
+  }
+
   // 获取统计数据
   static async statistics(req: AuthRequest, res: Response) {
     try {

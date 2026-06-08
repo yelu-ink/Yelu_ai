@@ -27,6 +27,26 @@ AuthorizedStudent.belongsTo(User, {
   as: 'manager',
 });
 
+User.hasMany(User, {
+  foreignKey: 'teacherId',
+  as: 'students',
+});
+
+User.belongsTo(User, {
+  foreignKey: 'teacherId',
+  as: 'teacher',
+});
+
+AuthorizedStudent.belongsTo(User, {
+  foreignKey: 'teacherId',
+  as: 'teacher',
+});
+
+User.hasMany(AuthorizedStudent, {
+  foreignKey: 'teacherId',
+  as: 'authorizedStudents',
+});
+
 // 用户可以有多个配置
 User.hasMany(UserConfig, {
   foreignKey: 'userId',

@@ -32,6 +32,10 @@ User.init({
         type: sequelize_1.DataTypes.STRING(50),
         allowNull: true,
     },
+    studentLink: {
+        type: sequelize_1.DataTypes.STRING(500),
+        allowNull: true,
+    },
     name: {
         type: sequelize_1.DataTypes.STRING(50),
         allowNull: false,
@@ -55,6 +59,14 @@ User.init({
         type: sequelize_1.DataTypes.ENUM('student', 'teacher'),
         allowNull: false,
         defaultValue: 'student',
+    },
+    teacherId: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'users',
+            key: 'id',
+        },
     },
 }, {
     sequelize: database_1.default,

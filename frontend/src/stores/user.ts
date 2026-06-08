@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import type { Router } from 'vue-router'
 import type { User } from '@/types'
 import authApi from '@/api/auth'
 
@@ -55,6 +56,17 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('token')
   }
 
+  const logoutAndRedirect = (router: Router) => {
+    logout()
+    router.push('/login')
+  }
+
+  const updateProfile = async (data: { name: string }) => {
+    const res = await authApi.updateProfile(data)
+    userInfo.value = res.data
+    return res.data
+  }
+
   // 初始化用户信息
   const initUser = async () => {
     if (token.value) {
@@ -71,6 +83,8 @@ export const useUserStore = defineStore('user', () => {
     login,
     register,
     logout,
+    logoutAndRedirect,
+    updateProfile,
     fetchUserInfo,
     initUser,
   }

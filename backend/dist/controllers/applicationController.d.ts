@@ -6,6 +6,7 @@ export declare class ApplicationController {
     static get(req: AuthRequest, res: Response): Promise<void>;
     static update(req: AuthRequest, res: Response): Promise<void>;
     static delete(req: AuthRequest, res: Response): Promise<void>;
+    static ranking(req: AuthRequest, res: Response): Promise<void>;
     static statistics(req: AuthRequest, res: Response): Promise<void>;
 }
 export default ApplicationController;

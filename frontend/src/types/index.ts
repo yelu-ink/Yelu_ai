@@ -58,6 +58,22 @@ export interface Statistics {
   trend: Record<string, number>
 }
 
+export interface ApplicationRankingItem {
+  rank: number
+  maskedName: string
+  className: string
+  totalApplications: number
+  isCurrentUser: boolean
+}
+
+export interface ApplicationRanking {
+  rankings: ApplicationRankingItem[]
+  currentRank: number
+  totalStudents: number
+  isBottom40: boolean
+  warningMessage?: string
+}
+
 export interface ClassStatistics {
   className: string
   studentCount: number

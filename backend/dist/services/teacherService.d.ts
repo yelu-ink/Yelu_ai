@@ -1,5 +1,7 @@
 import { AuthorizedStudent, Application } from '../models';
 export declare class TeacherService {
+    private static assertStudentOwnedByTeacher;
+    private static getTeacherStudentUserIds;
     static importAuthorizedStudents(students: Array<{
         name: string;
         className: string;
@@ -33,22 +35,38 @@ export declare class TeacherService {
         endDate?: string;
     }): Promise<Application[]>;
     static resolveUniqueUsername(name: string): Promise<string>;
-    static getStudentsOverview(_teacherId: number): Promise<{
+    static getStudentsOverview(teacherId: number): Promise<{
         id: number;
         name: string;
         username: string;
         password: string;
+        studentLink: string;
         className: string;
         totalApplications: number;
         statusCount: Record<string, number>;
     }[]>;
-    static createStudentAccount(name: string, major?: string, studentLink?: string): Promise<{
+    static createStudentAccount(teacherId: number, name: string, major?: string, studentLink?: string): Promise<{
         userId: number;
         username: string;
         password: string;
         className: string;
         studentLink: string;
     }>;
+    static updateStudentAccount(teacherId: number, userId: number, data: {
+        name: string;
+        username: string;
+        password: string;
+        className?: string;
+        studentLink?: string;
+    }): Promise<{
+        id: number;
+        name: string;
+        username: string;
+        password: string;
+        className: string;
+        studentLink: string;
+    }>;
+    static deleteStudentAccount(teacherId: number, userId: number): Promise<boolean>;
 }
 export default TeacherService;
 //# sourceMappingURL=teacherService.d.ts.map

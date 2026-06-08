@@ -5,10 +5,11 @@ interface AuthorizedStudentAttributes {
     className: string;
     isUsed: boolean;
     usedByUserId?: number;
+    teacherId?: number;
     createdAt?: Date;
     updatedAt?: Date;
 }
-interface AuthorizedStudentCreationAttributes extends Optional<AuthorizedStudentAttributes, 'id' | 'isUsed' | 'createdAt' | 'updatedAt'> {
+interface AuthorizedStudentCreationAttributes extends Optional<AuthorizedStudentAttributes, 'id' | 'isUsed' | 'teacherId' | 'createdAt' | 'updatedAt'> {
 }
 export declare class AuthorizedStudent extends Model<AuthorizedStudentAttributes, AuthorizedStudentCreationAttributes> implements AuthorizedStudentAttributes {
     id: number;
@@ -16,6 +17,7 @@ export declare class AuthorizedStudent extends Model<AuthorizedStudentAttributes
     className: string;
     isUsed: boolean;
     usedByUserId: number | undefined;
+    teacherId: number | undefined;
     readonly createdAt: Date;
     readonly updatedAt: Date;
 }

@@ -35,6 +35,14 @@ AuthorizedStudent.init({
             key: 'id',
         },
     },
+    teacherId: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'users',
+            key: 'id',
+        },
+    },
 }, {
     sequelize: database_1.default,
     tableName: 'authorized_students',

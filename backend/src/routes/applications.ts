@@ -13,6 +13,7 @@ router.use(requireRole('student'));
 router.post('/', ApplicationController.create);
 router.get('/', ApplicationController.list);
 router.get('/statistics', ApplicationController.statistics);
+router.get('/ranking', ApplicationController.ranking);
 router.get('/:id', ApplicationController.get);
 router.put('/:id', ApplicationController.update);
 router.delete('/:id', ApplicationController.delete);

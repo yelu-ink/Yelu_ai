@@ -1,5 +1,5 @@
 import request from './request'
-import type { Application, Statistics } from '@/types'
+import type { Application, ApplicationRanking, Statistics } from '@/types'
 
 interface ApplicationListResponse {
   success: boolean
@@ -14,6 +14,11 @@ interface ApplicationResponse {
 interface StatisticsResponse {
   success: boolean
   data: Statistics
+}
+
+interface RankingResponse {
+  success: boolean
+  data: ApplicationRanking
 }
 
 export const applicationApi = {
@@ -54,6 +59,11 @@ export const applicationApi = {
   // 获取统计数据
   getStatistics() {
     return request.get<StatisticsResponse>('/applications/statistics')
+  },
+
+  // 获取投递量排名
+  getRanking() {
+    return request.get<RankingResponse>('/applications/ranking')
   },
 }
 

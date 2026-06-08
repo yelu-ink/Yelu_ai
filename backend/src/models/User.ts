@@ -6,27 +6,31 @@ interface UserAttributes {
   username: string;
   password: string;
   plainPassword?: string;
+  studentLink?: string;
   name: string;
   email?: string;
   phone?: string;
   className?: string;
   role: 'student' | 'teacher';
+  teacherId?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'plainPassword' | 'createdAt' | 'updatedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'plainPassword' | 'studentLink' | 'teacherId' | 'createdAt' | 'updatedAt'> {}
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
   public username!: string;
   public password!: string;
   public plainPassword!: string | undefined;
+  public studentLink!: string | undefined;
   public name!: string;
   public email!: string | undefined;
   public phone!: string | undefined;
   public className!: string | undefined;
   public role!: 'student' | 'teacher';
+  public teacherId!: number | undefined;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -55,6 +59,10 @@ User.init(
       type: DataTypes.STRING(50),
       allowNull: true,
     },
+    studentLink: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
     name: {
       type: DataTypes.STRING(50),
       allowNull: false,
@@ -78,6 +86,14 @@ User.init(
       type: DataTypes.ENUM('student', 'teacher'),
       allowNull: false,
       defaultValue: 'student',
+    },
+    teacherId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
     },
   },
   {

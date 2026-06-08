@@ -7,11 +7,12 @@ interface AuthorizedStudentAttributes {
   className: string;
   isUsed: boolean;
   usedByUserId?: number;
+  teacherId?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface AuthorizedStudentCreationAttributes extends Optional<AuthorizedStudentAttributes, 'id' | 'isUsed' | 'createdAt' | 'updatedAt'> {}
+interface AuthorizedStudentCreationAttributes extends Optional<AuthorizedStudentAttributes, 'id' | 'isUsed' | 'teacherId' | 'createdAt' | 'updatedAt'> {}
 
 export class AuthorizedStudent extends Model<AuthorizedStudentAttributes, AuthorizedStudentCreationAttributes> implements AuthorizedStudentAttributes {
   public id!: number;
@@ -19,6 +20,7 @@ export class AuthorizedStudent extends Model<AuthorizedStudentAttributes, Author
   public className!: string;
   public isUsed!: boolean;
   public usedByUserId!: number | undefined;
+  public teacherId!: number | undefined;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -43,6 +45,14 @@ AuthorizedStudent.init(
       defaultValue: false,
     },
     usedByUserId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+    teacherId: {
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {

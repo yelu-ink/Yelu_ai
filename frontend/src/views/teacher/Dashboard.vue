@@ -66,7 +66,20 @@
         </div>
       </template>
       <el-table :data="studentList" style="width: 100%" v-loading="listLoading">
-        <el-table-column prop="name" label="学生姓名" width="120" />
+        <el-table-column label="学生姓名" width="120">
+          <template #default="{ row }">
+            <a
+              v-if="row.studentLink"
+              :href="row.studentLink"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="student-name-link"
+            >
+              {{ row.name }}
+            </a>
+            <span v-else>{{ row.name }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="username" label="账号" width="140" />
         <el-table-column prop="password" label="密码" width="120">
           <template #default="{ row }">
@@ -89,8 +102,14 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
+            <el-button type="primary" link @click="openEditDialog(row)">
+              修改信息
+            </el-button>
+            <el-button type="danger" link @click="confirmDeleteStudent(row)">
+              删除信息
+            </el-button>
             <el-button type="primary" link @click="viewStudentDetail(row)">
               查看详情
             </el-button>
@@ -116,8 +135,15 @@
         <el-form-item label="学生姓名" required>
           <el-input v-model="newStudent.name" placeholder="请输入学生姓名" />
         </el-form-item>
-        <el-form-item label="学习方向">
-          <el-input v-model="newStudent.major" placeholder="如：计算机科学与技术" />
+        <el-form-item label="学习方向" required>
+          <el-select v-model="newStudent.major" placeholder="请选择学习方向" style="width: 100%">
+            <el-option
+              v-for="option in studyDirectionOptions"
+              :key="option"
+              :label="option"
+              :value="option"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="学生链接">
           <el-input v-model="newStudent.studentLink" placeholder="可填写相关链接" />
@@ -163,18 +189,67 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 修改学生信息弹窗 -->
+    <el-dialog
+      v-model="editDialogVisible"
+      title="修改学生信息"
+      width="450px"
+    >
+      <el-form :model="editStudent" label-width="100px">
+        <el-form-item label="学生姓名" required>
+          <el-input v-model="editStudent.name" placeholder="请输入学生姓名" />
+        </el-form-item>
+        <el-form-item label="账号" required>
+          <el-input v-model="editStudent.username" placeholder="请输入账号" />
+        </el-form-item>
+        <el-form-item label="密码" required>
+          <el-input v-model="editStudent.password" placeholder="请输入密码" />
+        </el-form-item>
+        <el-form-item label="学习方向" required>
+          <el-select v-model="editStudent.className" placeholder="请选择学习方向" style="width: 100%">
+            <el-option
+              v-for="option in editDirectionOptions"
+              :key="option"
+              :label="option"
+              :value="option"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="学生链接">
+          <el-input v-model="editStudent.studentLink" placeholder="可填写相关链接" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="isUpdating" @click="updateStudentInfo">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import * as echarts from 'echarts'
 import type { ECharts } from 'echarts'
 import { OfficeBuilding, User, Document, TrendCharts, Plus } from '@element-plus/icons-vue'
 import teacherApi, { type StudentOverviewItem } from '@/api/teacher'
 import type { OverallStatistics } from '@/types'
+
+const STUDY_DIRECTION_OPTIONS = [
+  'C++开发',
+  'C++测试',
+  'Java开发',
+  'Java测试',
+  '其他',
+] as const
+
+const studyDirectionOptions = STUDY_DIRECTION_OPTIONS
 
 const router = useRouter()
 const statistics = ref<OverallStatistics>({
@@ -191,7 +266,10 @@ let chart: ECharts | null = null
 
 const createDialogVisible = ref(false)
 const resultDialogVisible = ref(false)
+const editDialogVisible = ref(false)
 const isCreating = ref(false)
+const isUpdating = ref(false)
+const editingStudentId = ref<number | null>(null)
 
 const newStudent = reactive({
   name: '',
@@ -206,7 +284,23 @@ const createdStudent = reactive({
   className: '',
 })
 
+const editStudent = reactive({
+  name: '',
+  username: '',
+  password: '',
+  className: '',
+  studentLink: '',
+})
+
 const offerCount = computed(() => statistics.value.statusCount['Offer'] || 0)
+
+const editDirectionOptions = computed(() => {
+  const current = editStudent.className
+  if (current && !STUDY_DIRECTION_OPTIONS.includes(current as typeof STUDY_DIRECTION_OPTIONS[number])) {
+    return [current, ...STUDY_DIRECTION_OPTIONS]
+  }
+  return [...STUDY_DIRECTION_OPTIONS]
+})
 
 const fetchStatistics = async () => {
   try {
@@ -281,6 +375,10 @@ const createStudent = async () => {
     ElMessage.warning('请填写学生姓名')
     return
   }
+  if (!newStudent.major) {
+    ElMessage.warning('请选择学习方向')
+    return
+  }
 
   if (isCreating.value) {
     return
@@ -342,6 +440,86 @@ const copyAccountInfo = async () => {
 
 const viewStudentDetail = (row: StudentOverviewItem) => {
   router.push(`/teacher/class/${encodeURIComponent(row.className)}`)
+}
+
+const openEditDialog = (row: StudentOverviewItem) => {
+  editingStudentId.value = row.id
+  editStudent.name = row.name
+  editStudent.username = row.username
+  editStudent.password = row.password || ''
+  editStudent.className = row.className
+  editStudent.studentLink = row.studentLink || ''
+  editDialogVisible.value = true
+}
+
+const updateStudentInfo = async () => {
+  if (!editStudent.name.trim()) {
+    ElMessage.warning('请填写学生姓名')
+    return
+  }
+  if (!editStudent.username.trim()) {
+    ElMessage.warning('请填写账号')
+    return
+  }
+  if (!editStudent.password) {
+    ElMessage.warning('请填写密码')
+    return
+  }
+  if (!editStudent.className) {
+    ElMessage.warning('请选择学习方向')
+    return
+  }
+  if (editingStudentId.value === null || isUpdating.value) {
+    return
+  }
+
+  isUpdating.value = true
+
+  try {
+    const res = await teacherApi.updateStudent(editingStudentId.value, {
+      name: editStudent.name.trim(),
+      username: editStudent.username.trim(),
+      password: editStudent.password,
+      className: editStudent.className.trim(),
+      studentLink: editStudent.studentLink.trim(),
+    })
+
+    if (res.success) {
+      ElMessage.success('学生信息已更新')
+      editDialogVisible.value = false
+      fetchStudentList()
+      fetchStatistics()
+    }
+  } catch (error: any) {
+    console.error('更新学生信息失败:', error)
+    ElMessage.error(error.message || '更新失败')
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+const confirmDeleteStudent = async (row: StudentOverviewItem) => {
+  try {
+    await ElMessageBox.confirm(
+      '确定删除该学生及其全部投递记录吗？',
+      '删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    await teacherApi.deleteStudent(row.id)
+    ElMessage.success('学生已删除')
+    fetchStudentList()
+    fetchStatistics()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('删除学生失败:', error)
+      ElMessage.error(error.message || '删除失败')
+    }
+  }
 }
 
 onMounted(() => {
@@ -411,6 +589,15 @@ onMounted(() => {
 .status-tags {
   display: flex;
   flex-wrap: wrap;
+}
+
+.student-name-link {
+  color: #409eff;
+  text-decoration: none;
+}
+
+.student-name-link:hover {
+  text-decoration: underline;
 }
 
 .result-content {

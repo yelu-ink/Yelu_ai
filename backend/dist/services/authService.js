@@ -14,15 +14,22 @@ class AuthService {
         if (existingUser) {
             throw new Error('用户名已被使用');
         }
-        const authorizedStudent = await models_1.AuthorizedStudent.findOne({
+        const authorizedStudents = await models_1.AuthorizedStudent.findAll({
             where: {
                 name,
                 className,
                 isUsed: false,
             },
         });
-        if (!authorizedStudent) {
+        if (authorizedStudents.length === 0) {
             throw new Error('该学生不在授权名单中，或已被注册');
+        }
+        if (authorizedStudents.length > 1) {
+            throw new Error('存在多个匹配授权记录，请联系老师确认注册信息');
+        }
+        const authorizedStudent = authorizedStudents[0];
+        if (!authorizedStudent.teacherId) {
+            throw new Error('授权记录缺少归属老师，请联系老师处理');
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         const user = await models_1.User.create({
@@ -33,6 +40,7 @@ class AuthService {
             email,
             phone,
             role: 'student',
+            teacherId: authorizedStudent.teacherId,
         });
         await authorizedStudent.update({
             isUsed: true,
@@ -95,7 +103,14 @@ class AuthService {
         if (!user) {
             throw new Error('用户不存在');
         }
-        await user.update(updates);
+        if (user.role === 'student') {
+            throw new Error('学生不可修改个人信息');
+        }
+        const trimmedName = updates.name?.trim();
+        if (!trimmedName) {
+            throw new Error('请填写姓名');
+        }
+        await user.update({ name: trimmedName });
         return {
             id: user.id,
             username: user.username,

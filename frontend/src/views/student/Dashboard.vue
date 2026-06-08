@@ -1,5 +1,51 @@
 <template>
   <div class="dashboard-container">
+    <el-card class="ranking-card">
+      <template #header>
+        <div class="card-header ranking-header">
+          <span>校招投递量排名</span>
+          <el-alert
+            v-if="rankingData.isBottom40 && rankingData.warningMessage"
+            :title="rankingData.warningMessage"
+            type="warning"
+            :closable="false"
+            show-icon
+            class="ranking-warning"
+          />
+        </div>
+      </template>
+      <el-table
+        :data="rankingData.rankings"
+        style="width: 100%"
+        max-height="360"
+        v-loading="rankingLoading"
+        :row-class-name="getRankingRowClass"
+      >
+        <el-table-column label="排名" width="80" align="center">
+          <template #default="{ row }">
+            <span
+              :class="{
+                'rank-danger': row.isCurrentUser && rankingData.isBottom40,
+                'rank-current': row.isCurrentUser && !rankingData.isBottom40,
+              }"
+            >
+              {{ row.rank }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="姓名" width="140">
+          <template #default="{ row }">
+            <span>{{ row.maskedName }}</span>
+            <el-tag v-if="row.isCurrentUser" type="primary" size="small" class="current-tag">
+              当前账号
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="className" label="学习方向" min-width="140" />
+        <el-table-column prop="totalApplications" label="投递总数" width="100" align="center" sortable />
+      </el-table>
+    </el-card>
+
     <el-card class="stats-card">
       <template #header>
         <div class="card-header">
@@ -90,9 +136,17 @@ import * as echarts from 'echarts'
 import type { ECharts } from 'echarts'
 import { Document, SuccessFilled, VideoPlay, List, Plus } from '@element-plus/icons-vue'
 import applicationApi from '@/api/application'
-import type { Statistics } from '@/types'
+import type { ApplicationRanking, Statistics } from '@/types'
 
 const router = useRouter()
+
+const rankingLoading = ref(false)
+const rankingData = ref<ApplicationRanking>({
+  rankings: [],
+  currentRank: 0,
+  totalStudents: 0,
+  isBottom40: false,
+})
 
 const statistics = ref<Statistics>({
   total: 0,
@@ -119,6 +173,22 @@ const goToApplications = () => {
 
 const goToApplicationsWithAdd = () => {
   router.push('/applications?add=true')
+}
+
+const getRankingRowClass = ({ row }: { row: { isCurrentUser: boolean } }) => {
+  return row.isCurrentUser ? 'current-user-row' : ''
+}
+
+const fetchRanking = async () => {
+  rankingLoading.value = true
+  try {
+    const res = await applicationApi.getRanking()
+    rankingData.value = res.data
+  } catch (error) {
+    console.error('获取投递量排名失败:', error)
+  } finally {
+    rankingLoading.value = false
+  }
 }
 
 const fetchStatistics = async () => {
@@ -239,6 +309,7 @@ const initCharts = () => {
 }
 
 onMounted(() => {
+  fetchRanking()
   fetchStatistics()
   window.addEventListener('resize', () => {
     statusChart?.resize()
@@ -251,6 +322,41 @@ onMounted(() => {
 <style scoped>
 .dashboard-container {
   padding: 20px;
+}
+
+.ranking-card {
+  margin-bottom: 20px;
+}
+
+.ranking-header {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ranking-warning {
+  flex: 1;
+  min-width: 280px;
+  margin: 0;
+}
+
+.current-tag {
+  margin-left: 8px;
+}
+
+.rank-danger {
+  color: #f56c6c;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.rank-current {
+  color: #409eff;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+:deep(.current-user-row) {
+  background-color: #ecf5ff !important;
 }
 
 .card-header {

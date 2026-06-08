@@ -33,7 +33,7 @@ export declare class AuthService {
         email: string | undefined;
         phone: string | undefined;
         className: string | undefined;
-        role: "student" | "teacher";
+        role: "teacher";
     }>;
 }
 export default AuthService;

@@ -34,6 +34,25 @@ export declare class ApplicationService {
         channelCount: Record<string, number>;
         trend: Record<string, number>;
     }>;
+    static getApplicationRanking(currentUserId: number): Promise<{
+        rankings: never[];
+        currentRank: number;
+        totalStudents: number;
+        isBottom40: boolean;
+        warningMessage?: undefined;
+    } | {
+        rankings: {
+            rank: number;
+            maskedName: string;
+            className: string;
+            totalApplications: number;
+            isCurrentUser: boolean;
+        }[];
+        currentRank: number;
+        totalStudents: number;
+        isBottom40: boolean;
+        warningMessage: string | undefined;
+    }>;
 }
 export default ApplicationService;
 //# sourceMappingURL=applicationService.d.ts.map

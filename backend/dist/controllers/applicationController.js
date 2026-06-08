@@ -112,6 +112,22 @@ class ApplicationController {
             });
         }
     }
+    static async ranking(req, res) {
+        try {
+            const userId = req.user.id;
+            const data = await applicationService_1.default.getApplicationRanking(userId);
+            res.json({
+                success: true,
+                data,
+            });
+        }
+        catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message || '获取投递量排名失败',
+            });
+        }
+    }
     static async statistics(req, res) {
         try {
             const userId = req.user.id;

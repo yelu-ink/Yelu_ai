@@ -265,7 +265,7 @@ class TeacherController {
                     message: '请填写学生姓名',
                 });
             }
-            const result = await teacherService_1.default.createStudentAccount(name, major, studentLink);
+            const result = await teacherService_1.default.createStudentAccount(req.user.id, name, major, studentLink);
             res.json({
                 success: true,
                 message: '学生账号创建成功',
@@ -280,6 +280,64 @@ class TeacherController {
             res.status(400).json({
                 success: false,
                 message: error.message || '创建学生账号失败',
+            });
+        }
+    }
+    static async updateStudentAccount(req, res) {
+        try {
+            const userId = parseInt(req.params.id, 10);
+            if (Number.isNaN(userId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: '无效的学生 ID',
+                });
+            }
+            const { name, username, password, className, studentLink } = req.body;
+            if (!name || !username || !password) {
+                return res.status(400).json({
+                    success: false,
+                    message: '请填写姓名、账号和密码',
+                });
+            }
+            const result = await teacherService_1.default.updateStudentAccount(req.user.id, userId, {
+                name,
+                username,
+                password,
+                className,
+                studentLink,
+            });
+            res.json({
+                success: true,
+                message: '学生信息更新成功',
+                data: result,
+            });
+        }
+        catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message || '更新学生信息失败',
+            });
+        }
+    }
+    static async deleteStudentAccount(req, res) {
+        try {
+            const userId = parseInt(req.params.id, 10);
+            if (Number.isNaN(userId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: '无效的学生 ID',
+                });
+            }
+            await teacherService_1.default.deleteStudentAccount(req.user.id, userId);
+            res.json({
+                success: true,
+                message: '学生已删除',
+            });
+        }
+        catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message || '删除学生失败',
             });
         }
     }

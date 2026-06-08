@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { User, AuthorizedStudent, Application } from '../models';
+import { User, AuthorizedStudent, Application, UserConfig } from '../models';
 import { sequelize } from '../config/database';
 import bcrypt from 'bcryptjs';
 import { generateUsername, generatePassword } from '../utils/pinyin';
@@ -7,6 +7,27 @@ import { generateUsername, generatePassword } from '../utils/pinyin';
 const DEFAULT_CLASS_NAME = '未分班';
 
 export class TeacherService {
+  private static async assertStudentOwnedByTeacher(teacherId: number, studentUserId: number) {
+    const user = await User.findOne({
+      where: { id: studentUserId, role: 'student', teacherId },
+    });
+
+    if (!user) {
+      throw new Error('无权操作该学生');
+    }
+
+    return user;
+  }
+
+  private static async getTeacherStudentUserIds(teacherId: number): Promise<number[]> {
+    const students = await User.findAll({
+      where: { role: 'student', teacherId },
+      attributes: ['id'],
+    });
+
+    return students.map((student) => student.id);
+  }
+
   // 导入授权学生名单
   static async importAuthorizedStudents(
     students: Array<{ name: string; className: string }>,
@@ -16,23 +37,24 @@ export class TeacherService {
 
     try {
       const results = [];
-      
+
       for (const student of students) {
         const [record, created] = await AuthorizedStudent.findOrCreate({
           where: {
             name: student.name,
             className: student.className,
+            teacherId,
           },
           defaults: {
             name: student.name,
             className: student.className,
+            teacherId,
             isUsed: false,
           } as any,
           transaction,
         });
 
         if (!created) {
-          // 如果已存在，更新为未使用状态（允许重新导入）
           await record.update(
             { isUsed: false, usedByUserId: null } as any,
             { transaction }
@@ -52,22 +74,14 @@ export class TeacherService {
 
   // 获取老师管理的所有学生
   static async getManagedStudents(teacherId: number, className?: string) {
-    const where: any = {};
-    
+    const where: any = { teacherId };
+
     if (className) {
       where.className = className;
     }
 
     const students = await AuthorizedStudent.findAll({
       where,
-      include: [
-        {
-          model: User,
-          as: 'manager',
-          where: { id: teacherId },
-          required: false,
-        },
-      ],
       order: [['className', 'ASC'], ['name', 'ASC']],
     });
 
@@ -76,42 +90,53 @@ export class TeacherService {
 
   // 获取班级列表
   static async getClassNames(teacherId: number) {
-    const students = await AuthorizedStudent.findAll({
+    const studentIds = await this.getTeacherStudentUserIds(teacherId);
+
+    const authStudents = await AuthorizedStudent.findAll({
+      where: { teacherId },
       attributes: ['className'],
       group: ['className'],
       raw: true,
     });
 
-    return students.map((s: any) => s.className).filter(Boolean);
+    const userClasses = studentIds.length > 0
+      ? await User.findAll({
+          where: { id: { [Op.in]: studentIds } },
+          attributes: ['className'],
+          group: ['className'],
+          raw: true,
+        })
+      : [];
+
+    return [...new Set([
+      ...authStudents.map((item: any) => item.className),
+      ...(userClasses as Array<{ className: string }>).map((item) => item.className),
+    ])].filter(Boolean);
   }
 
   // 获取某个班级的统计数据
   static async getClassStatistics(className: string, teacherId: number) {
-    // 获取该班级的所有学生用户
     const studentUsers = await User.findAll({
       where: {
         className,
         role: 'student',
+        teacherId,
       },
       attributes: ['id', 'name', 'username'],
     });
 
     const studentIds = studentUsers.map((u) => u.id);
 
-    // 获取投递记录
-    const applications = await Application.findAll({
-      where: {
-        userId: {
-          [Op.in]: studentIds,
-        },
-      },
-    });
+    const applications = studentIds.length > 0
+      ? await Application.findAll({
+          where: { userId: { [Op.in]: studentIds } },
+        })
+      : [];
 
     const totalApplications = applications.length;
     const studentCount = studentUsers.length;
     const avgApplications = studentCount > 0 ? (totalApplications / studentCount).toFixed(2) : '0';
 
-    // 状态分布
     const statusCount: Record<string, number> = {};
     applications.forEach((app) => {
       const status = app.status || '未设置';
@@ -154,30 +179,12 @@ export class TeacherService {
 
   // 获取所有班级的汇总统计
   static async getOverallStatistics(teacherId: number) {
-    const classNamesFromAuth = await this.getClassNames(teacherId);
-    const classNamesFromUsers = await User.findAll({
-      where: { role: 'student' },
-      attributes: ['className'],
-      group: ['className'],
-      raw: true,
-    });
-
-    const classNames = [...new Set([
-      ...classNamesFromAuth,
-      ...(classNamesFromUsers as Array<{ className: string }>)
-        .map((item) => item.className)
-        .filter(Boolean),
-    ])];
-
-    const totalStudents = await User.count({ where: { role: 'student' } });
-    const studentIds = (await User.findAll({
-      where: { role: 'student' },
-      attributes: ['id'],
-    })).map((user) => user.id);
+    const classNames = await this.getClassNames(teacherId);
+    const studentIds = await this.getTeacherStudentUserIds(teacherId);
 
     const overallStats = {
       totalClasses: classNames.length,
-      totalStudents,
+      totalStudents: studentIds.length,
       totalApplications: 0,
       statusCount: {} as Record<string, number>,
     };
@@ -210,34 +217,26 @@ export class TeacherService {
       endDate?: string;
     }
   ) {
-    // 获取该老师管理的所有学生
-    const where: any = {};
-    
+    const studentWhere: any = {
+      role: 'student',
+      teacherId,
+    };
+
     if (filters?.className) {
-      where.className = filters.className;
+      studentWhere.className = filters.className;
     }
 
-    const authorizedStudents = await AuthorizedStudent.findAll({
-      where,
-      attributes: ['name', 'className'],
-    });
-
-    // 获取对应的用户 ID
-    const studentNames = authorizedStudents.map((s) => s.name);
-    const classNames = [...new Set(authorizedStudents.map((s) => s.className))];
-
     const studentUsers = await User.findAll({
-      where: {
-        name: { [Op.in]: studentNames },
-        className: { [Op.in]: classNames },
-        role: 'student',
-      },
+      where: studentWhere,
       attributes: ['id', 'name', 'className'],
     });
 
     const studentIds = studentUsers.map((u) => u.id);
 
-    // 构建投递记录查询条件
+    if (studentIds.length === 0) {
+      return [];
+    }
+
     const appWhere: any = {
       userId: { [Op.in]: studentIds },
     };
@@ -293,10 +292,10 @@ export class TeacherService {
     throw new Error('无法生成唯一用户名，请稍后重试');
   }
 
-  static async getStudentsOverview(_teacherId: number) {
+  static async getStudentsOverview(teacherId: number) {
     const studentUsers = await User.findAll({
-      where: { role: 'student' },
-      attributes: ['id', 'name', 'className', 'username', 'plainPassword'],
+      where: { role: 'student', teacherId },
+      attributes: ['id', 'name', 'className', 'username', 'plainPassword', 'studentLink'],
       order: [['name', 'ASC']],
     });
 
@@ -335,6 +334,7 @@ export class TeacherService {
         name: user.name,
         username: user.username,
         password: user.plainPassword || '',
+        studentLink: user.studentLink || '',
         className: user.className || DEFAULT_CLASS_NAME,
         totalApplications: stats.totalApplications,
         statusCount: stats.statusCount,
@@ -344,6 +344,7 @@ export class TeacherService {
 
   // 创建学生账号
   static async createStudentAccount(
+    teacherId: number,
     name: string,
     major?: string,
     studentLink?: string
@@ -363,12 +364,15 @@ export class TeacherService {
         plainPassword: password,
         name: trimmedName,
         className,
+        studentLink: studentLink?.trim() || undefined,
         role: 'student',
+        teacherId,
       }, { transaction });
 
       await AuthorizedStudent.create({
         name: trimmedName,
         className,
+        teacherId,
         isUsed: true,
         usedByUserId: user.id,
       }, { transaction });
@@ -380,8 +384,102 @@ export class TeacherService {
         username: user.username,
         password,
         className,
-        studentLink: studentLink?.trim() || '',
+        studentLink: user.studentLink || studentLink?.trim() || '',
       };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  static async updateStudentAccount(
+    teacherId: number,
+    userId: number,
+    data: {
+      name: string;
+      username: string;
+      password: string;
+      className?: string;
+      studentLink?: string;
+    }
+  ) {
+    const user = await this.assertStudentOwnedByTeacher(teacherId, userId);
+
+    const trimmedName = data.name.trim();
+    const trimmedUsername = data.username.trim();
+    const className = data.className?.trim() || DEFAULT_CLASS_NAME;
+    const studentLink = data.studentLink?.trim() || undefined;
+
+    if (!trimmedName) {
+      throw new Error('请填写学生姓名');
+    }
+    if (!trimmedUsername) {
+      throw new Error('请填写账号');
+    }
+    if (!data.password) {
+      throw new Error('请填写密码');
+    }
+
+    const existingUser = await User.findOne({
+      where: {
+        username: trimmedUsername,
+        id: { [Op.ne]: userId },
+      },
+    });
+    if (existingUser) {
+      throw new Error(`用户名 ${trimmedUsername} 已存在`);
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+
+      await user.update({
+        name: trimmedName,
+        username: trimmedUsername,
+        password: hashedPassword,
+        plainPassword: data.password,
+        className,
+        studentLink,
+      }, { transaction });
+
+      await AuthorizedStudent.update({
+        name: trimmedName,
+        className,
+      }, {
+        where: { usedByUserId: userId, teacherId },
+        transaction,
+      });
+
+      await transaction.commit();
+
+      return {
+        id: user.id,
+        name: trimmedName,
+        username: trimmedUsername,
+        password: data.password,
+        className,
+        studentLink: studentLink || '',
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  static async deleteStudentAccount(teacherId: number, userId: number) {
+    await this.assertStudentOwnedByTeacher(teacherId, userId);
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      await Application.destroy({ where: { userId }, transaction });
+      await UserConfig.destroy({ where: { userId }, transaction });
+      await AuthorizedStudent.destroy({ where: { usedByUserId: userId, teacherId }, transaction });
+      await User.destroy({ where: { id: userId, teacherId, role: 'student' }, transaction });
+      await transaction.commit();
+      return true;
     } catch (error) {
       await transaction.rollback();
       throw error;
