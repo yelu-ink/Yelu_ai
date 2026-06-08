@@ -34,7 +34,41 @@ interface ImportResponse {
   }
 }
 
+interface CreateStudentResponse {
+  success: boolean
+  message: string
+  data: {
+    name: string
+    username: string
+    password: string
+    major?: string
+    studentLink?: string
+    className?: string
+    userId: number
+  }
+}
+
+export interface StudentOverviewItem {
+  id: number
+  name: string
+  username: string
+  password?: string
+  className: string
+  totalApplications: number
+  statusCount: Record<string, number>
+}
+
+interface StudentsOverviewResponse {
+  success: boolean
+  data: StudentOverviewItem[]
+}
+
 export const teacherApi = {
+  // 创建学生账号
+  createStudent(data: { name: string; major?: string; studentLink?: string }) {
+    return request.post<CreateStudentResponse>('/teacher/create-student', data)
+  },
+
   // 导入学生名单
   importStudents(file: File) {
     const formData = new FormData()
@@ -44,6 +78,11 @@ export const teacherApi = {
         'Content-Type': 'multipart/form-data',
       },
     })
+  },
+
+  // 获取学生概览
+  getStudentsOverview() {
+    return request.get<StudentsOverviewResponse>('/teacher/students/overview')
   },
 
   // 获取学生名单

@@ -14,6 +14,9 @@ router.post('/import-students', TeacherController.importStudents);
 // 获取学生名单
 router.get('/students', TeacherController.getStudents);
 
+// 获取学生概览（名单 + 投递统计）
+router.get('/students/overview', TeacherController.getStudentsOverview);
+
 // 获取班级列表
 router.get('/classes', TeacherController.getClasses);
 
@@ -22,6 +25,9 @@ router.get('/statistics/class/:className', TeacherController.getClassStatistics)
 
 // 获取总体统计
 router.get('/statistics/overall', TeacherController.getOverallStatistics);
+
+// 创建学生账号
+router.post('/create-student', TeacherController.createStudentAccount);
 
 // 获取所有投递记录
 router.get('/applications', TeacherController.getAllApplications);

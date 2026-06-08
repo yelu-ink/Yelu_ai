@@ -5,6 +5,7 @@ interface UserAttributes {
   id: number;
   username: string;
   password: string;
+  plainPassword?: string;
   name: string;
   email?: string;
   phone?: string;
@@ -14,12 +15,13 @@ interface UserAttributes {
   updatedAt?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'plainPassword' | 'createdAt' | 'updatedAt'> {}
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
   public username!: string;
   public password!: string;
+  public plainPassword!: string | undefined;
   public name!: string;
   public email!: string | undefined;
   public phone!: string | undefined;
@@ -48,6 +50,10 @@ User.init(
     password: {
       type: DataTypes.STRING(255),
       allowNull: false,
+    },
+    plainPassword: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
     },
     name: {
       type: DataTypes.STRING(50),

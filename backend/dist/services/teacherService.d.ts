@@ -32,6 +32,23 @@ export declare class TeacherService {
         startDate?: string;
         endDate?: string;
     }): Promise<Application[]>;
+    static resolveUniqueUsername(name: string): Promise<string>;
+    static getStudentsOverview(_teacherId: number): Promise<{
+        id: number;
+        name: string;
+        username: string;
+        password: string;
+        className: string;
+        totalApplications: number;
+        statusCount: Record<string, number>;
+    }[]>;
+    static createStudentAccount(name: string, major?: string, studentLink?: string): Promise<{
+        userId: number;
+        username: string;
+        password: string;
+        className: string;
+        studentLink: string;
+    }>;
 }
 export default TeacherService;
 //# sourceMappingURL=teacherService.d.ts.map

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="applications-container">
     <el-card>
       <template #header>
@@ -16,6 +16,45 @@
           </div>
         </div>
       </template>
+
+      <!-- 筛选栏 -->
+      <FilterBar
+        :model-value="filters"
+        :channel-options="channelOptions"
+        :type-options="typeOptions"
+        :status-options="statusOptions"
+        :location-options="locationOptions"
+        @update:model-value="syncFilters"
+      />
+
+      <!-- 筛选状态标签 -->
+      <div v-if="activeFilters.length > 0" class="filter-tags">
+        <div class="filter-tags-label">
+          <el-icon><Filter /></el-icon>
+          <span>已选条件：</span>
+        </div>
+        <div class="filter-tags-list">
+          <el-tag 
+            v-for="(tag, index) in activeFilters" 
+            :key="index" 
+            closable 
+            @close="removeFilter(tag.key)"
+          >
+            {{ tag.label }}: {{ tag.value }}
+          </el-tag>
+          <el-button size="small" type="text" @click="clearAllFilters">
+            清除全部
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 结果统计 -->
+      <div class="result-stats">
+        <span>共 <strong>{{ filteredApplications.length }}</strong> 条记录</span>
+        <span v-if="filteredApplications.length !== applications.length" class="filtered-hint">
+          （已筛选，原始 {{ applications.length }} 条）
+        </span>
+      </div>
 
       <div class="table-tip">
         <el-icon><InfoFilled /></el-icon>
@@ -329,13 +368,14 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Refresh, InfoFilled, ArrowLeft, Delete, Setting } from '@element-plus/icons-vue'
+import { Plus, Refresh, InfoFilled, ArrowLeft, Delete, Setting, Filter } from '@element-plus/icons-vue'
 import applicationApi from '@/api/application'
 import userConfigApi from '@/api/user-config'
 import type { Application } from '@/types'
 import EditableCell from '@/components/EditableCell.vue'
 import EditableSelectCell from '@/components/EditableSelectCell.vue'
 import EditableDateCell from '@/components/EditableDateCell.vue'
+import FilterBar, { type FilterConditions } from '@/components/FilterBar.vue'
 import { sortedCities } from '@/utils/cities'
 
 const router = useRouter()
@@ -345,9 +385,74 @@ const tableRef = ref()
 const applications = ref<Application[]>([])
 const loading = ref(false)
 
+const filters = reactive<FilterConditions>({
+  company: '',
+  position: '',
+  channel: '',
+  type: '',
+  status: '',
+  location: '',
+  applicationDateStart: '',
+  applicationDateEnd: '',
+  priorityMin: null,
+  priorityMax: null,
+  remarks: '',
+})
+
+const formatFilterDate = (val: string | Date | null | undefined) => {
+  if (!val) return ''
+  if (val instanceof Date) return val.toISOString().split('T')[0]
+  return String(val)
+}
+
+const normalizeFilterValue = (value: FilterConditions): FilterConditions => ({
+  ...value,
+  applicationDateStart: formatFilterDate(value.applicationDateStart),
+  applicationDateEnd: formatFilterDate(value.applicationDateEnd),
+})
+
+const syncFilters = (value: FilterConditions) => {
+  Object.assign(filters, normalizeFilterValue(value))
+}
+
+// 筛选后的应用列表
+const filteredApplications = computed(() => {
+  return applications.value.filter(item => {
+    if (filters.company && !(item.company ?? '').toLowerCase().includes(filters.company.toLowerCase())) return false
+    if (filters.position && !(item.position ?? '').toLowerCase().includes(filters.position.toLowerCase())) return false
+    if (filters.channel && item.channel !== filters.channel) return false
+    if (filters.type && item.type !== filters.type) return false
+    if (filters.status && item.status !== filters.status) return false
+    if (filters.location && item.location !== filters.location) return false
+    if (filters.applicationDateStart && item.applicationDate < filters.applicationDateStart) return false
+    if (filters.applicationDateEnd && item.applicationDate > filters.applicationDateEnd) return false
+    if (filters.priorityMin != null && (item.priority ?? 0) < filters.priorityMin) return false
+    if (filters.priorityMax != null && (item.priority ?? 0) > filters.priorityMax) return false
+    if (filters.remarks && !(item.remarks ?? '').toLowerCase().includes(filters.remarks.toLowerCase())) return false
+    return true
+  })
+})
+
+// 当前激活的筛选条件标签
+const activeFilters = computed(() => {
+  const tags: Array<{ key: string; label: string; value: string }> = []
+  if (filters.company) tags.push({ key: 'company', label: '公司', value: filters.company })
+  if (filters.position) tags.push({ key: 'position', label: '岗位', value: filters.position })
+  if (filters.channel) tags.push({ key: 'channel', label: '渠道', value: filters.channel })
+  if (filters.type) tags.push({ key: 'type', label: '类型', value: filters.type })
+  if (filters.status) tags.push({ key: 'status', label: '进展', value: filters.status })
+  if (filters.location) tags.push({ key: 'location', label: '地点', value: filters.location })
+  if (filters.applicationDateStart) tags.push({ key: 'applicationDateStart', label: '开始日期', value: filters.applicationDateStart })
+  if (filters.applicationDateEnd) tags.push({ key: 'applicationDateEnd', label: '结束日期', value: filters.applicationDateEnd })
+  if (filters.priorityMin != null) tags.push({ key: 'priorityMin', label: '最低重视度', value: filters.priorityMin.toString() })
+  if (filters.priorityMax != null) tags.push({ key: 'priorityMax', label: '最高重视度', value: filters.priorityMax.toString() })
+  if (filters.remarks) tags.push({ key: 'remarks', label: '备注', value: filters.remarks })
+  return tags
+})
+
 // 表格数据，包含添加行按钮
 const tableData = computed(() => {
-  return [...applications.value, { isAddRow: true }]
+  return [...filteredApplications.value, { isAddRow: true }]
 })
 
 // 右键菜单相关
@@ -435,6 +540,18 @@ const goToDashboard = () => {
   router.push('/dashboard')
 }
 
+// 移除单个筛选条件
+const removeFilter = (key: string) => {
+  (filters as any)[key] = key.startsWith('priority') ? null : ''
+}
+
+// 清除所有筛选条件
+const clearAllFilters = () => {
+  Object.keys(filters).forEach(key => {
+    (filters as any)[key] = key.startsWith('priority') ? null : ''
+  })
+}
+
 // 新增一行
 const handleAddRow = async () => {
   try {
@@ -500,21 +617,18 @@ const handleDelete = async (row: Application) => {
 
 // 处理列宽拖动
 const handleHeaderDragend = async (newWidth: number, oldWidth: number, column: any, event: Event) => {
-  // 保存列宽到后端
   const columnKey = column.property || column.label
   const configKey = `table-column-width-${columnKey}`
   try {
     await userConfigApi.save(configKey, newWidth.toString())
   } catch (error) {
     console.error('保存列宽失败:', error)
-    // 失败时回退到localStorage
     localStorage.setItem(configKey, newWidth.toString())
   }
 }
 
 // 处理行右键菜单
 const handleRowContextMenu = (row: any, column: any, event: MouseEvent) => {
-  // 跳过添加行按钮的右键菜单
   if (row.isAddRow) {
     return
   }
@@ -596,10 +710,7 @@ const removePreset = (type: string, index: number) => {
 
 // 保存预设值
 const savePresets = () => {
-  // 保存岗位选项到 localStorage
   localStorage.setItem('position-options', JSON.stringify(positionOptions.value))
-  
-  // 保存其他选项到 localStorage
   localStorage.setItem('channel-options', JSON.stringify(channelOptions.value))
   localStorage.setItem('type-options', JSON.stringify(typeOptions.value))
   localStorage.setItem('status-options', JSON.stringify(statusOptions.value))
@@ -610,22 +721,18 @@ const savePresets = () => {
 
 // 初始化所有预设值
 const initPresets = () => {
-  // 初始化岗位选项
   initPositionOptions()
   
-  // 初始化渠道选项
   const savedChannel = localStorage.getItem('channel-options')
   if (savedChannel) {
     channelOptions.value = JSON.parse(savedChannel)
   }
   
-  // 初始化类型选项
   const savedType = localStorage.getItem('type-options')
   if (savedType) {
     typeOptions.value = JSON.parse(savedType)
   }
   
-  // 初始化状态选项
   const savedStatus = localStorage.getItem('status-options')
   if (savedStatus) {
     statusOptions.value = JSON.parse(savedStatus)
@@ -638,32 +745,12 @@ const closeContextMenu = () => {
   selectedRow.value = null
 }
 
-// 监听全局点击事件，关闭右键菜单
-onMounted(async () => {
-  // 初始化所有预设值
-  initPresets()
-  
-  // 获取投递记录
-  await fetchApplications()
-  
-  // 获取用户配置并应用列宽
-  await loadUserConfigs()
-  
-  // 检查是否需要自动添加新行
-  if (route.query.add === 'true') {
-    await handleAddRow()
-  }
-  
-  document.addEventListener('click', closeContextMenu)
-})
-
 // 加载用户配置并应用列宽
 const loadUserConfigs = async () => {
   try {
     const response = await userConfigApi.getList()
     if (response.success && response.data) {
       const configs = response.data
-      // 应用列宽配置
       nextTick(() => {
         if (tableRef.value) {
           configs.forEach(config => {
@@ -671,7 +758,6 @@ const loadUserConfigs = async () => {
               const columnKey = config.configKey.replace('table-column-width-', '')
               const width = parseInt(config.configValue)
               if (!isNaN(width)) {
-                // 查找对应的列并设置宽度
                 const columns = tableRef.value.columns
                 const column = columns.find(col => col.property === columnKey || col.label === columnKey)
                 if (column) {
@@ -680,14 +766,12 @@ const loadUserConfigs = async () => {
               }
             }
           })
-          // 重新渲染表格
           tableRef.value.doLayout()
         }
       })
     }
   } catch (error) {
     console.error('加载用户配置失败:', error)
-    // 失败时尝试从localStorage加载
     loadFromLocalStorage()
   }
 }
@@ -708,11 +792,22 @@ const loadFromLocalStorage = () => {
           }
         }
       })
-      // 重新渲染表格
       tableRef.value.doLayout()
     }
   })
 }
+
+onMounted(async () => {
+  initPresets()
+  await fetchApplications()
+  await loadUserConfigs()
+  
+  if (route.query.add === 'true') {
+    await handleAddRow()
+  }
+  
+  document.addEventListener('click', closeContextMenu)
+})
 
 onUnmounted(() => {
   document.removeEventListener('click', closeContextMenu)
@@ -722,9 +817,9 @@ onUnmounted(() => {
 const spanMethod = ({ row, columnIndex }: { row: any; column: any; rowIndex: number; columnIndex: number }) => {
   if (row.isAddRow) {
     if (columnIndex === 0) {
-      return { rowspan: 1, colspan: 10 }  // 合并所有列
+      return { rowspan: 1, colspan: 10 }
     } else {
-      return { rowspan: 0, colspan: 0 }   // 隐藏其余列
+      return { rowspan: 0, colspan: 0 }
     }
   }
   return { rowspan: 1, colspan: 1 }
@@ -773,6 +868,55 @@ const getStatusType = (status: string) => {
   gap: 10px;
 }
 
+/* 筛选状态标签 */
+.filter-tags {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #fffbe6;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #ffe58f;
+}
+
+.filter-tags-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #d48806;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.filter-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 结果统计 */
+.result-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  color: #606266;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.result-stats strong {
+  color: #409eff;
+  font-size: 16px;
+}
+
+.filtered-hint {
+  color: #909399;
+  font-size: 12px;
+}
+
 .table-tip {
   display: flex;
   align-items: center;
@@ -781,11 +925,6 @@ const getStatusType = (status: string) => {
   color: #909399;
   font-size: 13px;
 }
-
-/* -----------------------------------------------------------
- * 表格样式：所有 cell 级别样式统一在 src/styles/editable-table.css
- * 这里只放本视图特有的：右键菜单、添加行、对话框等
- * ----------------------------------------------------------- */
 
 /* 列宽拖动把手 */
 .editable-table :deep(.el-table__header .el-table__cell) {
@@ -921,5 +1060,16 @@ const getStatusType = (status: string) => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .filter-tags {
+    flex-direction: column;
+  }
+  
+  .result-stats {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

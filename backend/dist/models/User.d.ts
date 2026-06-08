@@ -3,6 +3,7 @@ interface UserAttributes {
     id: number;
     username: string;
     password: string;
+    plainPassword?: string;
     name: string;
     email?: string;
     phone?: string;
@@ -11,12 +12,13 @@ interface UserAttributes {
     createdAt?: Date;
     updatedAt?: Date;
 }
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'plainPassword' | 'createdAt' | 'updatedAt'> {
 }
 export declare class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
     id: number;
     username: string;
     password: string;
+    plainPassword: string | undefined;
     name: string;
     email: string | undefined;
     phone: string | undefined;

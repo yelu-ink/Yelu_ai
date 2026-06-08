@@ -28,6 +28,10 @@ User.init({
         type: sequelize_1.DataTypes.STRING(255),
         allowNull: false,
     },
+    plainPassword: {
+        type: sequelize_1.DataTypes.STRING(50),
+        allowNull: true,
+    },
     name: {
         type: sequelize_1.DataTypes.STRING(50),
         allowNull: false,

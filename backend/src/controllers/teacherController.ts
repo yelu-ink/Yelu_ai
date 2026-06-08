@@ -99,6 +99,24 @@ export class TeacherController {
     }
   }
 
+  // 获取学生概览（名单 + 投递统计）
+  static async getStudentsOverview(req: AuthRequest, res: Response) {
+    try {
+      const teacherId = req.user!.id;
+      const students = await TeacherService.getStudentsOverview(teacherId);
+
+      res.json({
+        success: true,
+        data: students,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || '获取学生概览失败',
+      });
+    }
+  }
+
   // 获取学生名单
   static async getStudents(req: AuthRequest, res: Response) {
     try {
@@ -242,6 +260,41 @@ export class TeacherController {
       res.status(400).json({
         success: false,
         message: error.message || '导出失败',
+      });
+    }
+  }
+
+  // 创建学生账号
+  static async createStudentAccount(req: AuthRequest, res: Response) {
+    try {
+      const { name, major, studentLink } = req.body;
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          message: '请填写学生姓名',
+        });
+      }
+
+      const result = await TeacherService.createStudentAccount(
+        name,
+        major,
+        studentLink
+      );
+
+      res.json({
+        success: true,
+        message: '学生账号创建成功',
+        data: {
+          ...result,
+          name: name.trim(),
+          major: result.className,
+        },
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || '创建学生账号失败',
       });
     }
   }
