@@ -4,6 +4,8 @@ import { maskStudentName } from '../utils/maskName';
 
 const DEFAULT_CLASS_NAME = '未分班';
 
+const RECOMMEND_STATUSES = ['笔试/测评', '面试中', 'OC', 'Offer', '已拒'];
+
 interface ApplicationFilters {
   channel?: string;
   type?: string;
@@ -116,6 +118,18 @@ export class ApplicationService {
     await application.destroy();
     
     return true;
+  }
+
+  static async countRecentApplications(userId: number, days = 30): Promise<number> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    return Application.count({
+      where: {
+        userId,
+        applicationDate: { [Op.gte]: startDate.toISOString().split('T')[0] },
+      },
+    });
   }
 
   // 获取统计数据
@@ -273,6 +287,66 @@ export class ApplicationService {
       isBottom40,
       warningMessage,
     };
+  }
+
+  static async getApplicationRecommendations() {
+    const studentUsers = await User.findAll({
+      where: { role: 'student' },
+      attributes: ['id'],
+    });
+
+    if (studentUsers.length === 0) {
+      return [];
+    }
+
+    const studentIds = studentUsers.map((user) => user.id);
+    const applications = await Application.findAll({
+      where: {
+        userId: { [Op.in]: studentIds },
+        status: { [Op.in]: RECOMMEND_STATUSES },
+      },
+      attributes: ['company', 'position', 'applicationDate', 'channel', 'type', 'location', 'status', 'updatedAt'],
+      order: [['updatedAt', 'DESC']],
+    });
+
+    const dedupeMap = new Map<
+      string,
+      {
+        company: string;
+        position: string;
+        applicationDate: string;
+        channel?: string;
+        type?: string;
+        location?: string;
+        status?: string;
+        applicationCount: number;
+      }
+    >();
+
+    applications.forEach((app) => {
+      const key = `${app.company.trim().toLowerCase()}|${app.position.trim().toLowerCase()}`;
+      const existing = dedupeMap.get(key);
+
+      if (!existing) {
+        dedupeMap.set(key, {
+          company: app.company,
+          position: app.position,
+          applicationDate: app.applicationDate,
+          channel: app.channel,
+          type: app.type,
+          location: app.location,
+          status: app.status,
+          applicationCount: 1,
+        });
+        return;
+      }
+
+      existing.applicationCount += 1;
+    });
+
+    return Array.from(dedupeMap.values()).sort(
+      (a, b) => b.applicationDate.localeCompare(a.applicationDate)
+    );
   }
 }
 

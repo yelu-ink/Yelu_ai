@@ -9,6 +9,7 @@ const models_1 = require("../models");
 const database_1 = require("../config/database");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const pinyin_1 = require("../utils/pinyin");
+const applicationService_1 = __importDefault(require("./applicationService"));
 const DEFAULT_CLASS_NAME = '未分班';
 class TeacherService {
     static async assertStudentOwnedByTeacher(teacherId, studentUserId) {
@@ -362,6 +363,10 @@ class TeacherService {
             await transaction.rollback();
             throw error;
         }
+    }
+    static async getStudentStatistics(teacherId, studentUserId) {
+        await this.assertStudentOwnedByTeacher(teacherId, studentUserId);
+        return applicationService_1.default.getStatistics(studentUserId);
     }
     static async deleteStudentAccount(teacherId, userId) {
         await this.assertStudentOwnedByTeacher(teacherId, userId);

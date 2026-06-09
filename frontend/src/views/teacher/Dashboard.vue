@@ -55,6 +55,13 @@
       </el-col>
     </el-row>
 
+    <div class="dashboard-actions">
+      <el-button type="primary" plain @click="goToResourceLibrary">
+        <el-icon><FolderOpened /></el-icon>
+        校招资料库
+      </el-button>
+    </div>
+
     <el-card style="margin-top: 20px">
       <template #header>
         <div class="card-header">
@@ -102,7 +109,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="openEditDialog(row)">
               修改信息
@@ -113,10 +120,18 @@
             <el-button type="primary" link @click="viewStudentDetail(row)">
               查看详情
             </el-button>
+            <el-button type="warning" link @click="sendApplicationWarning(row)">
+              投递预警
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+
+    <DirectionOverview
+      v-model:class-name="selectedDirection"
+      :direction-options="directionOptions"
+    />
 
     <el-card style="margin-top: 20px">
       <template #header>
@@ -233,11 +248,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as echarts from 'echarts'
 import type { ECharts } from 'echarts'
-import { OfficeBuilding, User, Document, TrendCharts, Plus } from '@element-plus/icons-vue'
+import { OfficeBuilding, User, Document, TrendCharts, Plus, FolderOpened } from '@element-plus/icons-vue'
+import DirectionOverview from '@/components/teacher/DirectionOverview.vue'
 import teacherApi, { type StudentOverviewItem } from '@/api/teacher'
 import type { OverallStatistics } from '@/types'
 
@@ -252,6 +268,7 @@ const STUDY_DIRECTION_OPTIONS = [
 const studyDirectionOptions = STUDY_DIRECTION_OPTIONS
 
 const router = useRouter()
+const route = useRoute()
 const statistics = ref<OverallStatistics>({
   totalClasses: 0,
   totalStudents: 0,
@@ -261,6 +278,8 @@ const statistics = ref<OverallStatistics>({
 
 const studentList = ref<StudentOverviewItem[]>([])
 const listLoading = ref(false)
+const selectedDirection = ref('')
+const directionOptions = ref<string[]>([])
 const chartRef = ref<HTMLElement>()
 let chart: ECharts | null = null
 
@@ -294,6 +313,10 @@ const editStudent = reactive({
 
 const offerCount = computed(() => statistics.value.statusCount['Offer'] || 0)
 
+const goToResourceLibrary = () => {
+  router.push('/teacher/resources')
+}
+
 const editDirectionOptions = computed(() => {
   const current = editStudent.className
   if (current && !STUDY_DIRECTION_OPTIONS.includes(current as typeof STUDY_DIRECTION_OPTIONS[number])) {
@@ -301,6 +324,28 @@ const editDirectionOptions = computed(() => {
   }
   return [...STUDY_DIRECTION_OPTIONS]
 })
+
+const fetchDirectionOptions = async () => {
+  try {
+    const res = await teacherApi.getClasses()
+    const fromApi = res.data || []
+    const merged = [...new Set([...STUDY_DIRECTION_OPTIONS, ...fromApi])]
+    directionOptions.value = merged
+
+    const queryDirection = route.query.direction
+    if (typeof queryDirection === 'string' && queryDirection) {
+      selectedDirection.value = decodeURIComponent(queryDirection)
+    } else if (!selectedDirection.value && merged.length > 0) {
+      selectedDirection.value = merged[0]
+    }
+  } catch (error) {
+    console.error('获取学习方向列表失败:', error)
+    directionOptions.value = [...STUDY_DIRECTION_OPTIONS]
+    if (!selectedDirection.value) {
+      selectedDirection.value = directionOptions.value[0]
+    }
+  }
+}
 
 const fetchStatistics = async () => {
   try {
@@ -439,7 +484,14 @@ const copyAccountInfo = async () => {
 }
 
 const viewStudentDetail = (row: StudentOverviewItem) => {
-  router.push(`/teacher/class/${encodeURIComponent(row.className)}`)
+  router.push({
+    path: `/teacher/student/${row.id}`,
+    query: {
+      name: row.name,
+      className: row.className,
+      total: String(row.totalApplications),
+    },
+  })
 }
 
 const openEditDialog = (row: StudentOverviewItem) => {
@@ -522,9 +574,32 @@ const confirmDeleteStudent = async (row: StudentOverviewItem) => {
   }
 }
 
+const sendApplicationWarning = async (row: StudentOverviewItem) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定向 ${row.name} 发送投递预警提醒吗？`,
+      '投递预警',
+      {
+        confirmButtonText: '确定发送',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    await teacherApi.sendApplicationWarning(row.id)
+    ElMessage.success('投递预警已发送')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('发送投递预警失败:', error)
+      ElMessage.error(error.message || '发送失败')
+    }
+  }
+}
+
 onMounted(() => {
   fetchStatistics()
   fetchStudentList()
+  fetchDirectionOptions()
 
   setTimeout(() => {
     updateChart()
@@ -539,6 +614,12 @@ onMounted(() => {
 <style scoped>
 .teacher-dashboard-container {
   padding: 20px;
+}
+
+.dashboard-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .card-header {

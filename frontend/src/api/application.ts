@@ -1,5 +1,5 @@
 import request from './request'
-import type { Application, ApplicationRanking, Statistics } from '@/types'
+import type { Application, ApplicationRanking, ApplicationRecommendation, ApplicationWarningPending, Statistics } from '@/types'
 
 interface ApplicationListResponse {
   success: boolean
@@ -19,6 +19,16 @@ interface StatisticsResponse {
 interface RankingResponse {
   success: boolean
   data: ApplicationRanking
+}
+
+interface RecommendationsResponse {
+  success: boolean
+  data: ApplicationRecommendation[]
+}
+
+interface ApplicationWarningPendingResponse {
+  success: boolean
+  data: ApplicationWarningPending | null
 }
 
 export const applicationApi = {
@@ -64,6 +74,23 @@ export const applicationApi = {
   // 获取投递量排名
   getRanking() {
     return request.get<RankingResponse>('/applications/ranking')
+  },
+
+  // 获取校招公司投递推荐
+  getRecommendations() {
+    return request.get<RecommendationsResponse>('/applications/recommendations')
+  },
+
+  // 获取待处理的投递预警
+  getPendingApplicationWarning() {
+    return request.get<ApplicationWarningPendingResponse>('/applications/application-warnings/pending')
+  },
+
+  // 标记投递预警已读
+  markApplicationWarningRead(id: number) {
+    return request.post<{ success: boolean; message: string }>(
+      `/applications/application-warnings/${id}/read`
+    )
   },
 }
 

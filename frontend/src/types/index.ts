@@ -74,6 +74,22 @@ export interface ApplicationRanking {
   warningMessage?: string
 }
 
+export interface ApplicationRecommendation {
+  company: string
+  position: string
+  applicationDate: string
+  channel?: string
+  type?: string
+  location?: string
+  status?: string
+  applicationCount: number
+}
+
+export interface ApplicationWarningPending {
+  id: number
+  recentCount: number
+}
+
 export interface ClassStatistics {
   className: string
   studentCount: number
@@ -92,4 +108,19 @@ export interface OverallStatistics {
   totalStudents: number
   totalApplications: number
   statusCount: Record<string, number>
+}
+
+export interface RecruitmentResource {
+  id: number
+  teacherId: number
+  title: string
+  category: string
+  description?: string
+  contentType: 'file' | 'link'
+  filePath?: string
+  fileName?: string
+  linkUrl?: string
+  priority: number
+  createdAt: string
+  updatedAt: string
 }

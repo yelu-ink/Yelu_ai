@@ -3,11 +3,12 @@ import { User, AuthorizedStudent, Application, UserConfig } from '../models';
 import { sequelize } from '../config/database';
 import bcrypt from 'bcryptjs';
 import { generateUsername, generatePassword } from '../utils/pinyin';
+import ApplicationService from './applicationService';
 
 const DEFAULT_CLASS_NAME = '未分班';
 
 export class TeacherService {
-  private static async assertStudentOwnedByTeacher(teacherId: number, studentUserId: number) {
+  static async assertStudentOwnedByTeacher(teacherId: number, studentUserId: number) {
     const user = await User.findOne({
       where: { id: studentUserId, role: 'student', teacherId },
     });
@@ -466,6 +467,11 @@ export class TeacherService {
       await transaction.rollback();
       throw error;
     }
+  }
+
+  static async getStudentStatistics(teacherId: number, studentUserId: number) {
+    await this.assertStudentOwnedByTeacher(teacherId, studentUserId);
+    return ApplicationService.getStatistics(studentUserId);
   }
 
   static async deleteStudentAccount(teacherId: number, userId: number) {

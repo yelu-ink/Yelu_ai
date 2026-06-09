@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.testConnection = exports.UserConfig = exports.Application = exports.AuthorizedStudent = exports.User = exports.syncDatabase = void 0;
+exports.testConnection = exports.ApplicationWarning = exports.RecruitmentResource = exports.UserConfig = exports.Application = exports.AuthorizedStudent = exports.User = exports.syncDatabase = void 0;
 const database_1 = __importDefault(require("../config/database"));
 const User_1 = __importDefault(require("./User"));
 exports.User = User_1.default;
@@ -13,6 +13,10 @@ const Application_1 = __importDefault(require("./Application"));
 exports.Application = Application_1.default;
 const UserConfig_1 = __importDefault(require("./UserConfig"));
 exports.UserConfig = UserConfig_1.default;
+const RecruitmentResource_1 = __importDefault(require("./RecruitmentResource"));
+exports.RecruitmentResource = RecruitmentResource_1.default;
+const ApplicationWarning_1 = __importDefault(require("./ApplicationWarning"));
+exports.ApplicationWarning = ApplicationWarning_1.default;
 User_1.default.hasMany(Application_1.default, {
     foreignKey: 'userId',
     as: 'applications',
@@ -54,6 +58,33 @@ User_1.default.hasMany(UserConfig_1.default, {
 UserConfig_1.default.belongsTo(User_1.default, {
     foreignKey: 'userId',
     as: 'user',
+});
+User_1.default.hasMany(RecruitmentResource_1.default, {
+    foreignKey: 'teacherId',
+    as: 'recruitmentResources',
+    onDelete: 'CASCADE',
+});
+RecruitmentResource_1.default.belongsTo(User_1.default, {
+    foreignKey: 'teacherId',
+    as: 'teacher',
+});
+User_1.default.hasMany(ApplicationWarning_1.default, {
+    foreignKey: 'studentId',
+    as: 'receivedWarnings',
+    onDelete: 'CASCADE',
+});
+User_1.default.hasMany(ApplicationWarning_1.default, {
+    foreignKey: 'teacherId',
+    as: 'sentWarnings',
+    onDelete: 'CASCADE',
+});
+ApplicationWarning_1.default.belongsTo(User_1.default, {
+    foreignKey: 'studentId',
+    as: 'student',
+});
+ApplicationWarning_1.default.belongsTo(User_1.default, {
+    foreignKey: 'teacherId',
+    as: 'teacher',
 });
 const syncDatabase = async () => {
     try {

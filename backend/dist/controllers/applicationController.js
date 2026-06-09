@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApplicationController = void 0;
 const applicationService_1 = __importDefault(require("../services/applicationService"));
+const applicationWarningService_1 = __importDefault(require("../services/applicationWarningService"));
 class ApplicationController {
     static async create(req, res) {
         try {
@@ -112,6 +113,21 @@ class ApplicationController {
             });
         }
     }
+    static async recommendations(req, res) {
+        try {
+            const data = await applicationService_1.default.getApplicationRecommendations();
+            res.json({
+                success: true,
+                data,
+            });
+        }
+        catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message || '获取投递推荐失败',
+            });
+        }
+    }
     static async ranking(req, res) {
         try {
             const userId = req.user.id;
@@ -141,6 +157,45 @@ class ApplicationController {
             res.status(400).json({
                 success: false,
                 message: error.message || '获取统计数据失败',
+            });
+        }
+    }
+    static async getPendingWarning(req, res) {
+        try {
+            const userId = req.user.id;
+            const data = await applicationWarningService_1.default.getPendingWarning(userId);
+            res.json({
+                success: true,
+                data,
+            });
+        }
+        catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message || '获取投递预警失败',
+            });
+        }
+    }
+    static async markWarningRead(req, res) {
+        try {
+            const userId = req.user.id;
+            const warningId = parseInt(req.params.id, 10);
+            if (Number.isNaN(warningId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: '无效的预警 ID',
+                });
+            }
+            await applicationWarningService_1.default.markAsRead(warningId, userId);
+            res.json({
+                success: true,
+                message: '已确认',
+            });
+        }
+        catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message || '标记已读失败',
             });
         }
     }

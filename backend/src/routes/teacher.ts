@@ -21,6 +21,8 @@ router.get('/students/overview', TeacherController.getStudentsOverview);
 router.post('/create-student', TeacherController.createStudentAccount);
 
 // 更新/删除学生账号
+router.get('/students/:id/statistics', TeacherController.getStudentStatistics);
+router.post('/students/:id/application-warning', TeacherController.sendApplicationWarning);
 router.put('/students/:id', TeacherController.updateStudentAccount);
 router.delete('/students/:id', TeacherController.deleteStudentAccount);
 

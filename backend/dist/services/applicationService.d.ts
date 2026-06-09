@@ -27,6 +27,7 @@ export declare class ApplicationService {
     static getApplicationById(id: number, userId: number): Promise<Application>;
     static updateApplication(id: number, userId: number, updates: Partial<Application>): Promise<Application>;
     static deleteApplication(id: number, userId: number): Promise<boolean>;
+    static countRecentApplications(userId: number, days?: number): Promise<number>;
     static getStatistics(userId: number): Promise<{
         total: number;
         statusCount: Record<string, number>;
@@ -53,6 +54,16 @@ export declare class ApplicationService {
         isBottom40: boolean;
         warningMessage: string | undefined;
     }>;
+    static getApplicationRecommendations(): Promise<{
+        company: string;
+        position: string;
+        applicationDate: string;
+        channel?: string;
+        type?: string;
+        location?: string;
+        status?: string;
+        applicationCount: number;
+    }[]>;
 }
 export default ApplicationService;
 //# sourceMappingURL=applicationService.d.ts.map

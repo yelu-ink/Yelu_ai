@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import ApplicationService from '../services/applicationService';
+import ApplicationWarningService from '../services/applicationWarningService';
 
 export class ApplicationController {
   // 创建投递记录
@@ -138,6 +139,23 @@ export class ApplicationController {
     }
   }
 
+  // 获取校招公司投递推荐
+  static async recommendations(req: AuthRequest, res: Response) {
+    try {
+      const data = await ApplicationService.getApplicationRecommendations();
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || '获取投递推荐失败',
+      });
+    }
+  }
+
   // 获取投递量排名
   static async ranking(req: AuthRequest, res: Response) {
     try {
@@ -171,6 +189,51 @@ export class ApplicationController {
       res.status(400).json({
         success: false,
         message: error.message || '获取统计数据失败',
+      });
+    }
+  }
+
+  // 获取待处理的投递预警
+  static async getPendingWarning(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const data = await ApplicationWarningService.getPendingWarning(userId);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || '获取投递预警失败',
+      });
+    }
+  }
+
+  // 标记投递预警已读
+  static async markWarningRead(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const warningId = parseInt(req.params.id, 10);
+
+      if (Number.isNaN(warningId)) {
+        return res.status(400).json({
+          success: false,
+          message: '无效的预警 ID',
+        });
+      }
+
+      await ApplicationWarningService.markAsRead(warningId, userId);
+
+      res.json({
+        success: true,
+        message: '已确认',
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || '标记已读失败',
       });
     }
   }

@@ -42,6 +42,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '投递记录', requiresAuth: true, studentOnly: true },
       },
       {
+        path: 'resources',
+        name: 'ResourceLibrary',
+        component: () => import('@/views/student/ResourceLibrary.vue'),
+        meta: { title: '校招资料库', requiresAuth: true, studentOnly: true },
+      },
+      {
         path: 'teacher/dashboard',
         name: 'TeacherDashboard',
         component: () => import('@/views/teacher/Dashboard.vue'),
@@ -60,10 +66,23 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '投递记录', requiresAuth: true, teacherOnly: true },
       },
       {
+        path: 'teacher/resources',
+        name: 'TeacherResourceLibrary',
+        component: () => import('@/views/teacher/ResourceLibrary.vue'),
+        meta: { title: '校招资料库', requiresAuth: true, teacherOnly: true },
+      },
+      {
+        path: 'teacher/student/:studentId',
+        name: 'StudentDetail',
+        component: () => import('@/views/teacher/StudentDetail.vue'),
+        meta: { title: '学生投递详情', requiresAuth: true, teacherOnly: true },
+      },
+      {
         path: 'teacher/class/:className',
-        name: 'ClassDetail',
-        component: () => import('@/views/teacher/ClassDetail.vue'),
-        meta: { title: '班级详情', requiresAuth: true, teacherOnly: true },
+        redirect: (to) => ({
+          path: '/teacher/dashboard',
+          query: { direction: to.params.className as string },
+        }),
       },
     ],
   },

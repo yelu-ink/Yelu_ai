@@ -1,6 +1,6 @@
-import { AuthorizedStudent, Application } from '../models';
+import { User, AuthorizedStudent, Application } from '../models';
 export declare class TeacherService {
-    private static assertStudentOwnedByTeacher;
+    static assertStudentOwnedByTeacher(teacherId: number, studentUserId: number): Promise<User>;
     private static getTeacherStudentUserIds;
     static importAuthorizedStudents(students: Array<{
         name: string;
@@ -65,6 +65,13 @@ export declare class TeacherService {
         password: string;
         className: string;
         studentLink: string;
+    }>;
+    static getStudentStatistics(teacherId: number, studentUserId: number): Promise<{
+        total: number;
+        statusCount: Record<string, number>;
+        typeCount: Record<string, number>;
+        channelCount: Record<string, number>;
+        trend: Record<string, number>;
     }>;
     static deleteStudentAccount(teacherId: number, userId: number): Promise<boolean>;
 }

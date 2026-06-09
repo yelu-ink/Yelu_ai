@@ -1,5 +1,5 @@
 import request from './request'
-import type { AuthorizedStudent, ClassStatistics, OverallStatistics, Application } from '@/types'
+import type { AuthorizedStudent, ClassStatistics, OverallStatistics, Application, Statistics } from '@/types'
 
 interface StudentsResponse {
   success: boolean
@@ -82,6 +82,11 @@ interface StudentsOverviewResponse {
   data: StudentOverviewItem[]
 }
 
+interface StudentStatisticsResponse {
+  success: boolean
+  data: Statistics
+}
+
 export const teacherApi = {
   // 创建学生账号
   createStudent(data: { name: string; major?: string; studentLink?: string }) {
@@ -121,6 +126,18 @@ export const teacherApi = {
   // 删除学生
   deleteStudent(id: number) {
     return request.delete<DeleteStudentResponse>(`/teacher/students/${id}`)
+  },
+
+  // 获取单个学生投递统计
+  getStudentStatistics(studentId: number) {
+    return request.get<StudentStatisticsResponse>(`/teacher/students/${studentId}/statistics`)
+  },
+
+  // 发送投递预警
+  sendApplicationWarning(studentId: number) {
+    return request.post<{ success: boolean; message: string }>(
+      `/teacher/students/${studentId}/application-warning`
+    )
   },
 
   // 获取学生名单

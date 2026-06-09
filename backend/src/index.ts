@@ -7,6 +7,7 @@ import authRoutes from './routes/auth';
 import applicationRoutes from './routes/applications';
 import teacherRoutes from './routes/teacher';
 import userConfigRoutes from './routes/user-configs';
+import resourceRoutes from './routes/resources';
 import bcrypt from 'bcryptjs';
 import { User } from './models';
 
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/user-configs', userConfigRoutes);
+app.use('/api/resources', resourceRoutes);
 
 // 健康检查
 app.get('/health', (req, res) => {

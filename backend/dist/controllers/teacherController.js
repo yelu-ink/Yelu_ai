@@ -41,6 +41,7 @@ const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const teacherService_1 = __importDefault(require("../services/teacherService"));
+const applicationWarningService_1 = __importDefault(require("../services/applicationWarningService"));
 const config_1 = __importDefault(require("../config"));
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -283,6 +284,28 @@ class TeacherController {
             });
         }
     }
+    static async getStudentStatistics(req, res) {
+        try {
+            const userId = parseInt(req.params.id, 10);
+            if (Number.isNaN(userId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: '无效的学生 ID',
+                });
+            }
+            const stats = await teacherService_1.default.getStudentStatistics(req.user.id, userId);
+            res.json({
+                success: true,
+                data: stats,
+            });
+        }
+        catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message || '获取学生统计失败',
+            });
+        }
+    }
     static async updateStudentAccount(req, res) {
         try {
             const userId = parseInt(req.params.id, 10);
@@ -338,6 +361,28 @@ class TeacherController {
             res.status(400).json({
                 success: false,
                 message: error.message || '删除学生失败',
+            });
+        }
+    }
+    static async sendApplicationWarning(req, res) {
+        try {
+            const studentId = parseInt(req.params.id, 10);
+            if (Number.isNaN(studentId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: '无效的学生 ID',
+                });
+            }
+            await applicationWarningService_1.default.sendWarning(req.user.id, studentId);
+            res.json({
+                success: true,
+                message: '投递预警已发送',
+            });
+        }
+        catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message || '发送投递预警失败',
             });
         }
     }

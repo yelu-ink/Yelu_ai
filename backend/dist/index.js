@@ -12,6 +12,7 @@ const auth_1 = __importDefault(require("./routes/auth"));
 const applications_1 = __importDefault(require("./routes/applications"));
 const teacher_1 = __importDefault(require("./routes/teacher"));
 const user_configs_1 = __importDefault(require("./routes/user-configs"));
+const resources_1 = __importDefault(require("./routes/resources"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const models_2 = require("./models");
 const app = (0, express_1.default)();
@@ -23,6 +24,7 @@ app.use('/api/auth', auth_1.default);
 app.use('/api/applications', applications_1.default);
 app.use('/api/teacher', teacher_1.default);
 app.use('/api/user-configs', user_configs_1.default);
+app.use('/api/resources', resources_1.default);
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

@@ -3,6 +3,8 @@ import User from './User';
 import AuthorizedStudent from './AuthorizedStudent';
 import Application from './Application';
 import UserConfig from './UserConfig';
+import RecruitmentResource from './RecruitmentResource';
+import ApplicationWarning from './ApplicationWarning';
 
 // 定义关联关系
 User.hasMany(Application, {
@@ -59,6 +61,39 @@ UserConfig.belongsTo(User, {
   as: 'user',
 });
 
+User.hasMany(RecruitmentResource, {
+  foreignKey: 'teacherId',
+  as: 'recruitmentResources',
+  onDelete: 'CASCADE',
+});
+
+RecruitmentResource.belongsTo(User, {
+  foreignKey: 'teacherId',
+  as: 'teacher',
+});
+
+User.hasMany(ApplicationWarning, {
+  foreignKey: 'studentId',
+  as: 'receivedWarnings',
+  onDelete: 'CASCADE',
+});
+
+User.hasMany(ApplicationWarning, {
+  foreignKey: 'teacherId',
+  as: 'sentWarnings',
+  onDelete: 'CASCADE',
+});
+
+ApplicationWarning.belongsTo(User, {
+  foreignKey: 'studentId',
+  as: 'student',
+});
+
+ApplicationWarning.belongsTo(User, {
+  foreignKey: 'teacherId',
+  as: 'teacher',
+});
+
 // 同步数据库
 export const syncDatabase = async () => {
   try {
@@ -70,6 +105,6 @@ export const syncDatabase = async () => {
   }
 };
 
-export { User, AuthorizedStudent, Application, UserConfig };
+export { User, AuthorizedStudent, Application, UserConfig, RecruitmentResource, ApplicationWarning };
 export { testConnection } from '../config/database';
 export default sequelize;

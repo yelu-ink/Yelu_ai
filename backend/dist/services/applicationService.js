@@ -5,6 +5,7 @@ const sequelize_1 = require("sequelize");
 const models_1 = require("../models");
 const maskName_1 = require("../utils/maskName");
 const DEFAULT_CLASS_NAME = '未分班';
+const RECOMMEND_STATUSES = ['笔试/测评', '面试中', 'OC', 'Offer', '已拒'];
 class ApplicationService {
     static async createApplication(userId, data) {
         const application = await models_1.Application.create({
@@ -68,6 +69,16 @@ class ApplicationService {
         const application = await this.getApplicationById(id, userId);
         await application.destroy();
         return true;
+    }
+    static async countRecentApplications(userId, days = 30) {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+        return models_1.Application.count({
+            where: {
+                userId,
+                applicationDate: { [sequelize_1.Op.gte]: startDate.toISOString().split('T')[0] },
+            },
+        });
     }
     static async getStatistics(userId) {
         const applications = await models_1.Application.findAll({
@@ -193,6 +204,44 @@ class ApplicationService {
             isBottom40,
             warningMessage,
         };
+    }
+    static async getApplicationRecommendations() {
+        const studentUsers = await models_1.User.findAll({
+            where: { role: 'student' },
+            attributes: ['id'],
+        });
+        if (studentUsers.length === 0) {
+            return [];
+        }
+        const studentIds = studentUsers.map((user) => user.id);
+        const applications = await models_1.Application.findAll({
+            where: {
+                userId: { [sequelize_1.Op.in]: studentIds },
+                status: { [sequelize_1.Op.in]: RECOMMEND_STATUSES },
+            },
+            attributes: ['company', 'position', 'applicationDate', 'channel', 'type', 'location', 'status', 'updatedAt'],
+            order: [['updatedAt', 'DESC']],
+        });
+        const dedupeMap = new Map();
+        applications.forEach((app) => {
+            const key = `${app.company.trim().toLowerCase()}|${app.position.trim().toLowerCase()}`;
+            const existing = dedupeMap.get(key);
+            if (!existing) {
+                dedupeMap.set(key, {
+                    company: app.company,
+                    position: app.position,
+                    applicationDate: app.applicationDate,
+                    channel: app.channel,
+                    type: app.type,
+                    location: app.location,
+                    status: app.status,
+                    applicationCount: 1,
+                });
+                return;
+            }
+            existing.applicationCount += 1;
+        });
+        return Array.from(dedupeMap.values()).sort((a, b) => b.applicationDate.localeCompare(a.applicationDate));
     }
 }
 exports.ApplicationService = ApplicationService;

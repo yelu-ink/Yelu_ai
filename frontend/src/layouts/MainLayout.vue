@@ -9,21 +9,100 @@
     <main class="main-content">
       <router-view />
     </main>
+
+    <ApplicationWarningDialog
+      v-if="pendingWarning"
+      v-model="warningDialogVisible"
+      :warning-id="pendingWarning.id"
+      :recent-count="pendingWarning.recentCount"
+      @confirmed="handleWarningConfirmed"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import UserProfileDropdown from '@/components/UserProfileDropdown.vue'
+import ApplicationWarningDialog from '@/components/ApplicationWarningDialog.vue'
+import applicationApi from '@/api/application'
+import type { ApplicationWarningPending } from '@/types'
 
 const userStore = useUserStore()
 
-onMounted(() => {
-  if (userStore.token && !userStore.userInfo) {
-    userStore.fetchUserInfo()
+const pendingWarning = ref<ApplicationWarningPending | null>(null)
+const warningDialogVisible = ref(false)
+let warningPollTimer: ReturnType<typeof setInterval> | null = null
+let shownWarningId: number | null = null
+
+const fetchPendingWarning = async () => {
+  if (!userStore.isStudent) {
+    return
   }
+
+  try {
+    const res = await applicationApi.getPendingApplicationWarning()
+    if (!res.data) {
+      pendingWarning.value = null
+      return
+    }
+
+    pendingWarning.value = res.data
+
+    if (shownWarningId !== res.data.id) {
+      shownWarningId = res.data.id
+      warningDialogVisible.value = true
+    }
+  } catch (error) {
+    console.error('获取投递预警失败:', error)
+  }
+}
+
+const handleWarningConfirmed = () => {
+  pendingWarning.value = null
+  shownWarningId = null
+}
+
+const startWarningPolling = () => {
+  if (!userStore.isStudent) {
+    return
+  }
+
+  fetchPendingWarning()
+  warningPollTimer = setInterval(fetchPendingWarning, 30000)
+}
+
+const stopWarningPolling = () => {
+  if (warningPollTimer) {
+    clearInterval(warningPollTimer)
+    warningPollTimer = null
+  }
+}
+
+onMounted(async () => {
+  if (userStore.token && !userStore.userInfo) {
+    await userStore.fetchUserInfo()
+  }
+  startWarningPolling()
 })
+
+onUnmounted(() => {
+  stopWarningPolling()
+})
+
+watch(
+  () => userStore.isStudent,
+  (isStudent) => {
+    stopWarningPolling()
+    pendingWarning.value = null
+    warningDialogVisible.value = false
+    shownWarningId = null
+
+    if (isStudent) {
+      startWarningPolling()
+    }
+  }
+)
 </script>
 
 <style scoped>

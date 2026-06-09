@@ -62,11 +62,19 @@ const hasValue = computed(
   () => props.value !== undefined && props.value !== null && props.value !== ''
 )
 
+const focusAndSelectAll = () => {
+  const el = inputRef.value
+  if (!el) return
+  el.focus()
+  const nativeEl = props.type === 'textarea' ? el.textarea : el.input
+  nativeEl?.select()
+}
+
 const startEdit = () => {
   if (isEditing.value) return
   isEditing.value = true
   editValue.value = props.value ?? ''
-  nextTick(() => inputRef.value?.focus())
+  nextTick(focusAndSelectAll)
 }
 
 const commit = () => {

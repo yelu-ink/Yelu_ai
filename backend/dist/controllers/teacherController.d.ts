@@ -11,8 +11,10 @@ export declare class TeacherController {
     static getAllApplications(req: AuthRequest, res: Response): Promise<void>;
     static exportApplications(req: AuthRequest, res: Response): Promise<void>;
     static createStudentAccount(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+    static getStudentStatistics(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
     static updateStudentAccount(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
     static deleteStudentAccount(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+    static sendApplicationWarning(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
 }
 export default TeacherController;
 //# sourceMappingURL=teacherController.d.ts.map

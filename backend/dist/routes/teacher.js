@@ -13,6 +13,8 @@ router.post('/import-students', teacherController_1.default.importStudents);
 router.get('/students', teacherController_1.default.getStudents);
 router.get('/students/overview', teacherController_1.default.getStudentsOverview);
 router.post('/create-student', teacherController_1.default.createStudentAccount);
+router.get('/students/:id/statistics', teacherController_1.default.getStudentStatistics);
+router.post('/students/:id/application-warning', teacherController_1.default.sendApplicationWarning);
 router.put('/students/:id', teacherController_1.default.updateStudentAccount);
 router.delete('/students/:id', teacherController_1.default.deleteStudentAccount);
 router.get('/classes', teacherController_1.default.getClasses);
